@@ -1,0 +1,9 @@
+spring.datasource.url=jdbc:postgresql://localhost:5432/musicapp
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+spring.jpa.open-in-view=false
+server.port=8081
+spring.application.name=rhythmix-backend
