@@ -2,6 +2,7 @@ package com.musicapp.musicapp.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(
@@ -22,10 +23,12 @@ public class Favorite {
     // Many favorites belong to ONE user
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"favorites", "playlists", "hibernateLazyInitializer"})
     private User user;
 
     // Many favorites point to ONE song
     @ManyToOne
     @JoinColumn(name = "song_id", nullable = false)
+    @JsonIgnoreProperties({"playlists", "hibernateLazyInitializer"})
     private Song song;
 }

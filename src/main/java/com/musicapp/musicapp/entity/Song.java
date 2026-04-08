@@ -3,7 +3,8 @@ package com.musicapp.musicapp.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
 @Entity
 @Table(name = "songs")
 @Data
@@ -29,5 +30,7 @@ public class Song {
     // The "other side" of the Playlist<->Song relationship
     // mappedBy = "songs" refers to the "songs" field in Playlist
     @ManyToMany(mappedBy = "songs")
-    private List<Playlist> playlists;
+    @JsonIgnore
+    @Builder.Default
+    private List<Playlist> playlists = new ArrayList<>();
 }

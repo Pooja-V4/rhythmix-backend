@@ -2,6 +2,8 @@ package com.musicapp.musicapp.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
+import java.util.ArrayList;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users")
@@ -28,9 +30,13 @@ public class User {
     // mappedBy = "user" means the "user" field in Playlist owns this relationship
     // cascade = ALL means if you delete a user, their playlists are also deleted
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Playlist> playlists;
+    @JsonIgnore
+    @Builder.Default
+    private List<Playlist> playlists = new ArrayList<>();
 
     // One user can have MANY favorites
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Favorite> favorites;
+    @JsonIgnore
+    @Builder.Default
+    private List<Favorite> favorites = new ArrayList<>();
 }
