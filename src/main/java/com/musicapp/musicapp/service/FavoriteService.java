@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional
 public class FavoriteService {
 
     private final FavoriteRepository favoriteRepository;
@@ -25,7 +26,6 @@ public class FavoriteService {
         this.songRepository = songRepository;
     }
 
-    // Add a song to favorites
     public Favorite addFavorite(Long userId, Long songId) {
         if (favoriteRepository.existsByUserIdAndSongId(userId, songId)) {
             throw new RuntimeException("Song already in favorites");
@@ -35,19 +35,15 @@ public class FavoriteService {
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new RuntimeException("Song not found"));
 
-        Favorite favorite = Favorite.builder()
-                .user(user)
-                .song(song)
-                .build();
+        // use constructor instead of builder
+        Favorite favorite = new Favorite(user, song);
         return favoriteRepository.save(favorite);
     }
 
-    // Get all favorites for a user
     public List<Favorite> getUserFavorites(Long userId) {
         return favoriteRepository.findByUserId(userId);
     }
 
-    // Remove from favorites
     @Transactional
     public void removeFavorite(Long userId, Long songId) {
         if (!favoriteRepository.existsByUserIdAndSongId(userId, songId)) {

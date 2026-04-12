@@ -1,18 +1,13 @@
 package com.musicapp.musicapp.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.util.List;
-import java.util.ArrayList;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "playlists")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Playlist {
 
     @Id
@@ -22,22 +17,32 @@ public class Playlist {
     @Column(nullable = false)
     private String name;
 
-    // Many playlists belong to ONE user
-    // @JoinColumn creates the foreign key column in this table
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
     private User user;
 
-    // Many playlists can have MANY songs (and vice versa)
-    // @JoinTable defines the join table that Hibernate creates automatically
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "playlist_songs",                          // Join table name
-            joinColumns = @JoinColumn(name = "playlist_id"), // FK to this entity
-            inverseJoinColumns = @JoinColumn(name = "song_id") // FK to Song
+            name = "playlist_songs",
+            joinColumns = @JoinColumn(name = "playlist_id"),
+            inverseJoinColumns = @JoinColumn(name = "song_id")
     )
-    @Builder.Default
     @JsonIgnoreProperties({"playlists", "hibernateLazyInitializer"})
     private List<Song> songs = new ArrayList<>();
+
+    // ===== Constructors =====
+    public Playlist() {}
+
+    // ===== Getters =====
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public User getUser() { return user; }
+    public List<Song> getSongs() { return songs; }
+
+    // ===== Setters =====
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setUser(User user) { this.user = user; }
+    public void setSongs(List<Song> songs) { this.songs = songs; }
 }
