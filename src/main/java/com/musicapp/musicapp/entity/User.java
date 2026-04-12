@@ -1,9 +1,10 @@
 package com.musicapp.musicapp.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users")
@@ -23,6 +24,9 @@ public class User {
     @JsonIgnore
     private String password;
 
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Playlist> playlists = new ArrayList<>();
@@ -31,24 +35,22 @@ public class User {
     @JsonIgnore
     private List<Favorite> favorites = new ArrayList<>();
 
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
+
     // ===== Constructors =====
     public User() {}
-
-    public User(Long id, String name, String email, String password,
-                List<Playlist> playlists, List<Favorite> favorites) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.password = password;
-        this.playlists = playlists;
-        this.favorites = favorites;
-    }
 
     // ===== Getters =====
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getPassword() { return password; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
     public List<Playlist> getPlaylists() { return playlists; }
     public List<Favorite> getFavorites() { return favorites; }
 
@@ -57,6 +59,7 @@ public class User {
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
     public void setPassword(String password) { this.password = password; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setPlaylists(List<Playlist> playlists) { this.playlists = playlists; }
     public void setFavorites(List<Favorite> favorites) { this.favorites = favorites; }
 

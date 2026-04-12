@@ -7,3 +7,6 @@ spring.jpa.show-sql=true
 spring.jpa.open-in-view=false
 server.port=8081
 spring.application.name=rhythmix-backend
+
+jwt.secret=your_jwt_secert_key // 256 bits (32 characters)
+jwt.expiration=86400000 // expire 24 hours

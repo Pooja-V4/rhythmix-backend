@@ -10,6 +10,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -19,50 +21,47 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
-    public AuthController(
-            AuthenticationManager authenticationManager,
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil) {
+    public AuthController(AuthenticationManager authenticationManager,
+                          UserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
 
-    // ✅ POST /auth/register
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-
-        // Check email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
+            // Return consistent JSON error — not plain string
             return ResponseEntity
                     .badRequest()
-                    .body("Email already registered");
+                    .body(Map.of("message", "Email already registered"));
         }
 
-        // Create user with HASHED password
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword())) // ← BCrypt hash
+                .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
         User saved = userRepository.save(user);
-
-        // Generate token immediately after register
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getId());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new LoginResponse(token, saved.getId(), saved.getName(), saved.getEmail()));
+                .body(new LoginResponse(
+                        token,
+                        saved.getId(),
+                        saved.getName(),
+                        saved.getEmail()
+                ));
     }
 
-    // ✅ POST /auth/login
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            // Spring Security verifies email + password
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
@@ -70,20 +69,23 @@ public class AuthController {
                     )
             );
 
-            // If we reach here — credentials are valid
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow();
 
             String token = jwtUtil.generateToken(user.getEmail(), user.getId());
 
-            return ResponseEntity.ok(
-                    new LoginResponse(token, user.getId(), user.getName(), user.getEmail())
-            );
+            return ResponseEntity.ok(new LoginResponse(
+                    token,
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail()
+            ));
 
         } catch (AuthenticationException e) {
+            // Return consistent JSON error
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
+                    .body(Map.of("message", "Invalid email or password"));
         }
     }
 }
