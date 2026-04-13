@@ -73,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register",
+                                "/auth/google",
                                 "/error"
                         ).permitAll()
                         .anyRequest().authenticated()

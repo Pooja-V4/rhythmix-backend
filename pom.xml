@@ -83,6 +83,23 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Google API client to verify Google tokens -->
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.http-client</groupId>
+			<artifactId>google-http-client-gson</artifactId>
+			<version>1.44.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.oauth-client</groupId>
+			<artifactId>google-oauth-client</artifactId>
+			<version>1.35.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

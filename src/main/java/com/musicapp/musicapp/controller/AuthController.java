@@ -12,6 +12,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.musicapp.musicapp.dto.GoogleAuthRequest;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.Collections;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -88,4 +96,60 @@ public class AuthController {
                     .body(Map.of("message", "Invalid email or password"));
         }
     }
+
+    @Value("${google.client.id}")
+    private String googleClientId;
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequest request) {
+        try {
+            // Verify the Google token is real and valid
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier
+                    .Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getToken());
+
+            if (idToken == null) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Invalid Google token"));
+            }
+
+            // Extract user info from Google token
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String googleId = payload.getSubject();
+
+            // Find existing user or create new one
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                // New Google user — create account automatically
+                User newUser = User.builder()
+                        .name(name != null ? name : email.split("@")[0])
+                        .email(email)
+                        // Random password — Google users don't need it
+                        .password(passwordEncoder.encode(googleId + "_google_oauth"))
+                        .build();
+                return userRepository.save(newUser);
+            });
+
+            // Generate your JWT token
+            String token = jwtUtil.generateToken(user.getEmail(), user.getId());
+
+            return ResponseEntity.ok(new LoginResponse(
+                    token,
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Google authentication failed"));
+        }
+    }
+
 }
