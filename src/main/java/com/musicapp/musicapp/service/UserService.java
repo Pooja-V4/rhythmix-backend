@@ -55,7 +55,8 @@ public class UserService {
                 user.getCreatedAt(),
                 totalPlaylists,
                 totalFavorites,
-                totalSongs
+                totalSongs,
+                user.isGoogleUser()
         );
     }
 

@@ -12,3 +12,15 @@ jwt.secret=your_jwt_secert_key // 256 bits (32 characters)
 jwt.expiration=86400000 // expire 24 hours
 
 google.client.id=your_google_client_id
+
+# ===== APP =====
+app.base.url=http://localhost:5173
+
+# ===== EMAIL (Gmail SMTP) =====
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your_gmail@gmail.com
+spring.mail.password=your_16_char_app_password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
