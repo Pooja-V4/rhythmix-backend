@@ -30,6 +30,14 @@ public class PlaylistService {
     public Playlist createPlaylist(Long userId, Playlist playlist) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        // Check if user already has a playlist with same name
+        if (playlistRepository.existsByUserIdAndNameIgnoreCase(userId, playlist.getName())) {
+            throw new RuntimeException(
+                    "You already have a playlist named \"" + playlist.getName() + "\""
+            );
+        }
+
         playlist.setUser(user);
         return playlistRepository.save(playlist);
     }
@@ -45,6 +53,13 @@ public class PlaylistService {
                 .orElseThrow(() -> new RuntimeException("Playlist not found"));
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new RuntimeException("Song not found"));
+
+        boolean alreadyExists = playlist.getSongs().stream()
+                .anyMatch(s -> s.getId().equals(songId));
+
+        if (alreadyExists) {
+            throw new RuntimeException("Song already exists in this playlist");
+        }
 
         playlist.getSongs().add(song);
         return playlistRepository.save(playlist);

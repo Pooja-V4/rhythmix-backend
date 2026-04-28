@@ -13,9 +13,27 @@ public class GlobalExceptionHandler {
     // Handles all RuntimeExceptions from services
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
+        String message = ex.getMessage();
+        if (message != null && (
+                message.contains("already") ||
+                        message.contains("duplicate") ||
+                        message.contains("exists")
+        )) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)   // 409
+                    .body(Map.of("message", message));
+        }
+
+        // 404 for not found
+        if (message != null && message.contains("not found")) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)  // 404
+                    .body(Map.of("message", message));
+        }
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("message", ex.getMessage()));
+                .body(Map.of("message", message != null ? message : "Something went wrong"));
     }
 
     // Handles illegal arguments

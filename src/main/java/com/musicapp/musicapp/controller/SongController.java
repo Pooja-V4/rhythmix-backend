@@ -20,7 +20,9 @@ public class SongController {
     // POST /songs → Add a song
     @PostMapping
     public ResponseEntity<Song> addSong(@RequestBody Song song) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(songService.addSong(song));
+        // findOrCreate prevents duplicate songs in DB
+        Song saved = songService.addSong(song);
+        return ResponseEntity.status(HttpStatus.OK).body(saved);
     }
 
     // GET /songs → Get all songs

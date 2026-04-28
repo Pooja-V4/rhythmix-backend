@@ -13,7 +13,14 @@ public class SongService {
     public SongService(SongRepository songRepository) {
         this.songRepository = songRepository;
     }
-
+    // Find existing song or create new one — prevents duplicate songs in DB
+    public Song findOrCreate(Song song) {
+        return songRepository
+                .findByTitleIgnoreCaseAndArtistIgnoreCase(
+                        song.getTitle(), song.getArtist()
+                )
+                .orElseGet(() -> songRepository.save(song));
+    }
     public Song addSong(Song song) {
         return songRepository.save(song);
     }
