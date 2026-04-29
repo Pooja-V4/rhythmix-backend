@@ -1,11 +1,10 @@
 services:
   - type: web
     name: rhythmix-backend
-    runtime: java
+    runtime: docker
     region: singapore
     plan: free
-    buildCommand: "./mvnw clean package -DskipTests"
-    startCommand: "java -jar target/musicapp-0.0.1-SNAPSHOT.jar"
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
         sync: false
