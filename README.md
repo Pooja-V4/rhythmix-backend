@@ -10,6 +10,8 @@
 
 **A full-featured RESTful music application backend built with Spring Boot, Spring Security, JWT Authentication, and PostgreSQL.**
 
+🌐 **Live Demo:** [https://rhythmix-frontend.vercel.app/](https://rhythmix-frontend.vercel.app/)
+
 [Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [API Reference](#-api-reference) • [Database Design](#-database-design) • [Contributing](#-contributing)
 
 </div>
@@ -47,8 +49,7 @@ Rhythmix Backend is a production-ready REST API that powers the Rhythmix music a
 ### 🔐 Authentication & Security
 - **JWT Authentication** — stateless token-based auth (24hr expiry)
 - **BCrypt Password Hashing** — secure password storage
-- **Email Verification** — users must verify email before login
-- **Google OAuth2** — sign in with Google account
+- **Google OAuth2** — sign in with Google account and email verification 
 - **Forgot Password** — secure password reset via email link (1hr expiry)
 - **Spring Security** — all endpoints protected except auth routes
 
@@ -85,19 +86,19 @@ Rhythmix Backend is a production-ready REST API that powers the Rhythmix music a
 
 ## 🛠 Tech Stack
 
-| Technology | Version | Purpose |
-|---|---|---|
-| Java | 21 | Programming language |
-| Spring Boot | 4.0.5 | Application framework |
-| Spring Security | 7.x | Authentication & authorization |
-| Spring Data JPA | 4.x | Database ORM layer |
-| Hibernate | 7.2.7 | JPA implementation |
-| PostgreSQL | 18 | Relational database |
-| JWT (jjwt) | 0.12.6 | Token generation & validation |
-| BCrypt | - | Password hashing |
-| JavaMailSender | - | Email sending |
-| Maven | 3.x | Build tool & dependency management |
-| Lombok | 1.18.x | Boilerplate reduction |
+| Technology      | Version | Purpose                              |
+|-----------------|---|--------------------------------------|
+| Java            | 21 | Programming language                 |
+| Spring Boot     | 4.0.5 | Application framework                |
+| Spring Security | 7.x | Authentication & authorization       |
+| Spring Data JPA | 4.x | Database ORM layer                   |
+| Hibernate       | 7.2.7 | JPA implementation                   |
+| PostgreSQL      | 18 | Relational database                  |
+| JWT (jjwt)      | 0.12.6 | Token generation & validation        |
+| BCrypt          | - | Password hashing                     |
+| Oauth2          | - | authentication and mail verification |
+| Maven           | 3.x | Build tool & dependency management   |
+| Lombok          | 1.18.x | Boilerplate reduction                |
 
 ---
 
@@ -200,42 +201,55 @@ spring.application.name=rhythmix-backend
 jwt.secret=your-super-secret-key-minimum-32-characters-long
 jwt.expiration=86400000
 
-# ===== EMAIL (Gmail SMTP) =====
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your_gmail@gmail.com
-spring.mail.password=your_16_char_app_password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.starttls.required=true
-
 # ===== APP =====
 app.base.url=http://localhost:5173
+frontend.url=http://localhost:5173
 
 # ===== GOOGLE OAUTH =====
 google.client.id=your_google_client_id.apps.googleusercontent.com
-```
-
-**3. Gmail App Password setup**
-
-```
-Gmail → Google Account → Security
-→ Enable 2-Step Verification
-→ App Passwords → Mail → Windows
-→ Generate → copy 16-char password (no spaces)
-→ paste in spring.mail.password
-```
-
-**4. Google OAuth setup**
+gmail.client.id=your_google_client_id.apps.googleusercontent.com
+gmail.client.secret=your_google_client_secret
+gmail.refresh.token=your_gmail_refresh_token // provided by the oauth2 gmail api 
+gmail.from.email=you@gmail.com // test verified mail
 
 ```
-https://console.cloud.google.com
-→ Create Project → APIs & Services
-→ OAuth Consent Screen → External
-→ Credentials → Create OAuth Client ID
-→ Web Application
-→ Authorized origins: http://localhost:5173
-→ Copy Client ID → paste in google.client.id
+
+
+**3. Google OAuth setup**
+```
+1. GOOGLE CLOUD CONSOLE SETUP
+   https://console.cloud.google.com
+   → Create Project → APIs & Services
+   → OAuth Consent Screen → External
+   → Add test user: you@gmail.com 
+   → Credentials → Create OAuth Client ID
+   → Web Application
+   → Authorized origins: http://localhost:5173 //frontend url
+   → Authorized redirect URIs: https://developers.google.com/oauthplayground 
+   → Copy Client ID and Client Secret
+
+2. ENABLE GMAIL API
+   APIs & Services → Library
+   → Search "Gmail API" → Enable
+
+3. GET REFRESH TOKEN
+   → Go to https://developers.google.com/oauthplayground
+   → Click ⚙️ gear icon (top right)
+   → Check "Use your own OAuth credentials"
+   → Enter your Client ID and Client Secret
+   → Close settings
+   → Left panel → find "Gmail API v1"
+   → Select: https://mail.google.com/
+   → Click "Authorize APIs"
+   → Choose your Gmail account → Allow
+   → Click "Exchange authorization code for tokens"
+   → Copy the Refresh Token
+
+4. ADD TO application-local.properties
+   gmail.client.id=your_client_id
+   gmail.client.secret=your_client_secret
+   gmail.refresh.token=1//04xxxx...
+   gmail.from.email=poojavelmurugen004@gmail.com
 ```
 
 ### Running the App

@@ -11,16 +11,14 @@ spring.application.name=rhythmix-backend
 jwt.secret=your_jwt_secert_key // 256 bits (32 characters)
 jwt.expiration=86400000 // expire 24 hours
 
-google.client.id=your_google_client_id
-
-# ===== APP =====
+# ===== APP URLS =====
 app.base.url=http://localhost:5173
+frontend.url=http://localhost:5173
 
-# ===== EMAIL (Gmail SMTP) =====
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your_gmail@gmail.com
-spring.mail.password=your_16_char_app_password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.starttls.required=true
+# ===== GOOGLE =====
+google.client.id=your_google_client_id
+gmail.client.id=your_google_client_id
+gmail.client.secret=your_google_client_secret
+gmail.refresh.token=your_gmail_refresh_token // provided by the oauth2 gmail api
+gmail.from.email=you@gmail.com // test verified mail
+

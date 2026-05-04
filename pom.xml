@@ -105,16 +105,6 @@
 			<version>v1-rev20220404-2.0.0</version>
 		</dependency>
 
-		<!-- Java Mail Sender — for sending emails -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
     </dependencies>
 
 	<build>
