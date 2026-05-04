@@ -1,199 +1,191 @@
 package com.musicapp.musicapp.service;
 
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import java.util.Properties;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${gmail.client.id}")
+    private String clientId;
 
-    @Value("${spring.mail.username}")
+    @Value("${gmail.client.secret}")
+    private String clientSecret;
+
+    @Value("${gmail.refresh.token}")
+    private String refreshToken;
+
+    @Value("${gmail.from.email}")
     private String fromEmail;
 
     @Value("${app.base.url}")
     private String baseUrl;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    // Build Gmail service using OAuth2
+    private Gmail buildGmailService() throws Exception {
+        NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
+
+        // Build credential using refresh token
+        GoogleCredential credential = new GoogleCredential.Builder()
+                .setTransport(httpTransport)
+                .setJsonFactory(jsonFactory)
+                .setClientSecrets(clientId, clientSecret)
+                .build()
+                .setRefreshToken(refreshToken);
+
+        // Refresh access token automatically
+        credential.refreshToken();
+
+        return new Gmail.Builder(httpTransport, jsonFactory, credential)
+                .setApplicationName("Rhythmix")
+                .build();
     }
 
+    // Create MimeMessage and convert to Gmail Message
+    private Message createMessage(String to, String subject, String htmlBody)
+            throws MessagingException, Exception {
+
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+
+        MimeMessage email = new MimeMessage(session);
+        email.setFrom(new InternetAddress(fromEmail, "Rhythmix"));
+        email.addRecipient(MimeMessage.RecipientType.TO, new InternetAddress(to));
+        email.setSubject(subject);
+        email.setContent(htmlBody, "text/html; charset=utf-8");
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        email.writeTo(buffer);
+        byte[] rawMessageBytes = buffer.toByteArray();
+        String encodedEmail = Base64.getUrlEncoder().encodeToString(rawMessageBytes);
+
+        Message message = new Message();
+        message.setRaw(encodedEmail);
+        return message;
+    }
+
+    // Core send method
+    private void sendEmail(String to, String subject, String html) {
+        try {
+            System.out.println("📧 Sending email to: " + to);
+            Gmail service = buildGmailService();
+            Message message = createMessage(to, subject, html);
+            service.users().messages().send("me", message).execute();
+            System.out.println("✅ Email sent successfully to: " + to);
+        } catch (Exception e) {
+            System.err.println("❌ Gmail API error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Verification email
     public void sendVerificationEmail(String toEmail, String name, String token) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        String verifyLink = baseUrl + "/verify-email?token=" + token;
 
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Verify your Rhythmix account");
+        System.out.println("🔗 Verify link: " + verifyLink);
 
-            String verifyLink = baseUrl + "/verify-email?token=" + token;
+        String html = "<!DOCTYPE html><html><head><style>"
+                + "body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0}"
+                + ".wrap{max-width:520px;margin:40px auto;background:#1a1a2e;border-radius:16px;overflow:hidden}"
+                + ".top{padding:32px 40px 16px;text-align:center}"
+                + ".logo{font-size:26px;font-weight:bold;color:#1DB954}"
+                + ".body{padding:24px 40px}"
+                + "h2{color:#fff;font-size:22px;margin:0 0 12px}"
+                + "p{color:#aaa;font-size:15px;line-height:1.6;margin:0 0 16px}"
+                + ".btn{display:inline-block;background:#1DB954;color:#000 !important;"
+                + "font-weight:bold;font-size:16px;padding:14px 36px;border-radius:50px;text-decoration:none}"
+                + ".lnk{color:#1DB954;word-break:break-all;font-size:13px}"
+                + ".foot{padding:16px 40px 28px;text-align:center}"
+                + ".foot p{color:#555;font-size:12px;margin:0}"
+                + "</style></head><body>"
+                + "<div class='wrap'>"
+                + "<div class='top'><div class='logo'>🎵 Rhythmix</div></div>"
+                + "<div class='body'>"
+                + "<h2>Welcome, " + name + "!</h2>"
+                + "<p>Thanks for signing up! Click the button below to verify your email and start listening.</p>"
+                + "<div style='text-align:center;margin:24px 0'>"
+                + "<a href='" + verifyLink + "' class='btn'>Verify Email Address</a>"
+                + "</div>"
+                + "<p>This link expires in <strong style='color:#fff'>24 hours</strong>.</p>"
+                + "<p>If the button doesn't work, paste this link in your browser:</p>"
+                + "<p><a href='" + verifyLink + "' class='lnk'>" + verifyLink + "</a></p>"
+                + "<p style='color:#666;font-size:13px'>Didn't sign up? You can safely ignore this email.</p>"
+                + "</div>"
+                + "<div class='foot'><p>© 2026 Rhythmix · Your personal music experience</p></div>"
+                + "</div></body></html>";
 
-            // Beautiful HTML email
-            String html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="UTF-8">
-                  <style>
-                    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-                    .container { max-width: 520px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; }
-                    .header { background: #1a1a2e; padding: 40px 40px 20px; text-align: center; }
-                    .logo { font-size: 32px; font-weight: bold; color: #1DB954; letter-spacing: -1px; }
-                    .body { padding: 32px 40px; }
-                    h2 { color: #ffffff; font-size: 22px; margin: 0 0 12px; }
-                    p { color: #aaaaaa; font-size: 15px; line-height: 1.6; margin: 0 0 20px; }
-                    .btn { display: inline-block; background: #1DB954; color: #000000 !important;
-                           font-weight: bold; font-size: 16px; padding: 14px 36px;
-                           border-radius: 50px; text-decoration: none; margin: 8px 0; }
-                    .footer { padding: 20px 40px 32px; text-align: center; }
-                    .footer p { color: #555555; font-size: 12px; margin: 0; }
-                    .link { color: #1DB954; word-break: break-all; font-size: 13px; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <div class="header">
-                      <div class="logo">🎵 Rhythmix</div>
-                    </div>
-                    <div class="body">
-                      <h2>Welcome, %s!</h2>
-                      <p>Thanks for signing up. Please verify your email address to activate your Rhythmix account and start discovering music.</p>
-                      <div style="text-align:center; margin: 28px 0;">
-                        <a href="%s" class="btn">Verify Email Address</a>
-                      </div>
-                      <p>This link expires in <strong style="color:#fff">24 hours</strong>.</p>
-                      <p>If the button doesn't work, paste this link in your browser:</p>
-                      <p><a href="%s" class="link">%s</a></p>
-                      <p>If you didn't sign up for Rhythmix, you can safely ignore this email.</p>
-                    </div>
-                    <div class="footer">
-                      <p>© 2026 Rhythmix · Built with ❤️</p>
-                    </div>
-                  </div>
-                </body>
-                </html>
-                """.formatted(name, verifyLink, verifyLink, verifyLink);
-
-            helper.setText(html, true); // true = HTML
-            mailSender.send(message);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
-        }
+        sendEmail(toEmail, "Verify your Rhythmix account", html);
     }
 
-    public void sendPasswordChangedEmail(String toEmail, String name) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Your Rhythmix password was changed");
-
-            String html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <style>
-                    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; }
-                    .container { max-width: 520px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; }
-                    .header { padding: 40px 40px 20px; text-align: center; }
-                    .logo { font-size: 28px; font-weight: bold; color: #1DB954; }
-                    .body { padding: 32px 40px; }
-                    h2 { color: #fff; font-size: 20px; margin: 0 0 12px; }
-                    p { color: #aaa; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
-                    .footer { padding: 20px 40px 32px; text-align: center; }
-                    .footer p { color: #555; font-size: 12px; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <div class="header"><div class="logo">🎵 Rhythmix</div></div>
-                    <div class="body">
-                      <h2>Password Changed</h2>
-                      <p>Hi %s,</p>
-                      <p>Your Rhythmix password was successfully changed.</p>
-                      <p>If you didn't make this change, please contact support immediately.</p>
-                    </div>
-                    <div class="footer"><p>© 2026 Rhythmix</p></div>
-                  </div>
-                </body>
-                </html>
-                """.formatted(name);
-
-            helper.setText(html, true);
-            mailSender.send(message);
-        } catch (Exception e) {
-            System.err.println("Could not send password changed email: " + e.getMessage());
-        }
-    }
+    // Password reset email
     public void sendPasswordResetEmail(String toEmail, String name, String token) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        String resetLink = baseUrl + "/reset-password?token=" + token;
 
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Reset your Rhythmix password");
+        System.out.println("🔗 Reset link: " + resetLink);
 
-            String resetLink = baseUrl + "/reset-password?token=" + token;
+        String html = "<!DOCTYPE html><html><head><style>"
+                + "body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0}"
+                + ".wrap{max-width:520px;margin:40px auto;background:#1a1a2e;border-radius:16px;overflow:hidden}"
+                + ".top{padding:32px 40px 16px;text-align:center}"
+                + ".logo{font-size:26px;font-weight:bold;color:#1DB954}"
+                + ".body{padding:24px 40px}"
+                + "h2{color:#fff;font-size:20px;margin:0 0 12px}"
+                + "p{color:#aaa;font-size:15px;line-height:1.6;margin:0 0 16px}"
+                + ".btn{display:inline-block;background:#1DB954;color:#000 !important;"
+                + "font-weight:bold;font-size:16px;padding:14px 36px;border-radius:50px;text-decoration:none}"
+                + ".lnk{color:#1DB954;word-break:break-all;font-size:13px}"
+                + ".warn{background:#2a1a1a;border-left:3px solid #e94560;padding:12px 16px;border-radius:4px}"
+                + ".warn p{color:#e94560;font-size:13px;margin:0}"
+                + ".foot{padding:16px 40px 28px;text-align:center}"
+                + ".foot p{color:#555;font-size:12px;margin:0}"
+                + "</style></head><body>"
+                + "<div class='wrap'>"
+                + "<div class='top'><div class='logo'>🎵 Rhythmix</div></div>"
+                + "<div class='body'>"
+                + "<h2>Reset your password</h2>"
+                + "<p>Hi " + name + ", we received a request to reset your Rhythmix password.</p>"
+                + "<div style='text-align:center;margin:24px 0'>"
+                + "<a href='" + resetLink + "' class='btn'>Reset Password</a>"
+                + "</div>"
+                + "<p>This link expires in <strong style='color:#fff'>1 hour</strong>.</p>"
+                + "<p>Paste this link if the button doesn't work:</p>"
+                + "<p><a href='" + resetLink + "' class='lnk'>" + resetLink + "</a></p>"
+                + "<div class='warn'><p>Didn't request this? Ignore this email safely.</p></div>"
+                + "</div>"
+                + "<div class='foot'><p>© 2026 Rhythmix</p></div>"
+                + "</div></body></html>";
 
-            String html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <style>
-                body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; }
-                .container { max-width: 520px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; }
-                .header { padding: 40px 40px 20px; text-align: center; }
-                .logo { font-size: 28px; font-weight: bold; color: #1DB954; }
-                .body { padding: 32px 40px; }
-                h2 { color: #fff; font-size: 22px; margin: 0 0 12px; }
-                p { color: #aaa; font-size: 15px; line-height: 1.6; margin: 0 0 20px; }
-                .btn { display: inline-block; background: #1DB954; color: #000 !important;
-                       font-weight: bold; font-size: 16px; padding: 14px 36px;
-                       border-radius: 50px; text-decoration: none; }
-                .footer { padding: 20px 40px 32px; text-align: center; }
-                .footer p { color: #555; font-size: 12px; margin: 0; }
-                .link { color: #1DB954; word-break: break-all; font-size: 13px; }
-                .warning { background: #2a1a1a; border-left: 3px solid #e94560;
-                           padding: 12px 16px; border-radius: 4px; margin-top: 20px; }
-                .warning p { color: #e94560; font-size: 13px; margin: 0; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header"><div class="logo">🎵 Rhythmix</div></div>
-                <div class="body">
-                  <h2>Reset your password</h2>
-                  <p>Hi %s,</p>
-                  <p>We received a request to reset your Rhythmix password. Click the button below to choose a new password.</p>
-                  <div style="text-align:center; margin: 28px 0;">
-                    <a href="%s" class="btn">Reset Password</a>
-                  </div>
-                  <p>This link expires in <strong style="color:#fff">1 hour</strong>.</p>
-                  <p>If the button doesn't work, paste this link in your browser:</p>
-                  <p><a href="%s" class="link">%s</a></p>
-                  <div class="warning">
-                    <p>If you didn't request a password reset, you can safely ignore this email. Your password will not change.</p>
-                  </div>
-                </div>
-                <div class="footer"><p>© 2026 Rhythmix</p></div>
-              </div>
-            </body>
-            </html>
-            """.formatted(name, resetLink, resetLink, resetLink);
+        sendEmail(toEmail, "Reset your Rhythmix password 🔑", html);
+    }
 
-            helper.setText(html, true);
-            mailSender.send(message);
+    // Password changed notification
+    public void sendPasswordChangedEmail(String toEmail, String name) {
+        String html = "<!DOCTYPE html><html><body style='font-family:Arial;background:#f5f5f5;margin:0'>"
+                + "<div style='max-width:520px;margin:40px auto;background:#1a1a2e;border-radius:16px;padding:32px 40px'>"
+                + "<div style='font-size:24px;font-weight:bold;color:#1DB954;margin-bottom:20px'>🎵 Rhythmix</div>"
+                + "<h2 style='color:#fff;margin:0 0 12px'>Password Changed</h2>"
+                + "<p style='color:#aaa;font-size:15px'>Hi " + name + ",</p>"
+                + "<p style='color:#aaa;font-size:15px'>Your Rhythmix password was successfully changed.</p>"
+                + "<p style='color:#aaa;font-size:15px'>If you didn't make this change, contact support immediately.</p>"
+                + "<p style='color:#555;font-size:12px;margin-top:24px'>© 2026 Rhythmix</p>"
+                + "</div></body></html>";
 
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to send reset email: " + e.getMessage());
-        }
+        sendEmail(toEmail, "Your Rhythmix password was changed", html);
     }
 }
